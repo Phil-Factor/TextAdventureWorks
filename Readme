@@ -1,0 +1,69 @@
+Although the ACE drivers are used more by people reading Excel files, I must emphasise that there are drivers for a number of other formats. It is pretty easy, for example, to turn a bunch of CSV files into a relational database. Just to prove it, I’ve created a CSV/Text version of AdventureWorks, together with its schema.ini. This was originally created in this article The TSQL of CSV: Comma-Delimited of Errors. With this text-based database, you can do a lot of the sample AdventureWorks SQL examples with only a minor modification. 
+Once you’ve installed the ACE drivers, you’ll can use a modified version of the routine I showed you for exploring the PUBS Excel database to play along. 
+All you have to do is to unzip Text Adventureworks into a new directory with the name of your database (AdventureWorks) and point your connection string at the directory by giving it the full path to the directory. I just altered two lines
+
+#set the directory in which your database should go. 
+$TextFilePath='MyPathToTheDirectoryTextAdventureWorks' #the 
+
+and
+
+$Connection.ConnectionString='Driver={Microsoft Access Text Driver (*.txt, *.csv)};DBQ='+$TextFilePath+'' 
+
+Now you should be ready with your text-based relation database.
+You can, of course, create tables and write to them using the INSERT statement.
+create table [Log#csv] (MyInteger int,TheDate date TheMessage char(125)) 
+
+and do insert statements into it. You can SELECT INTO as well, which is new to me. I didn’t notice this in previous incarnations of this driver.
+With CREATE statements, you can use ‘BIT, BYTE , LONGCHAR, CURRENCY, INTEGER, SMALLINT, REAL, FLOAT, CHAR or DATETIME 
+(Out of curiosity, the OLEDB driver allows  Long, Single, Double, Currency, DateTime , Bit, Byte, GUID, BigBinary, LongBinary, VarBinary, LongText, VarChar char and Decimal) 
+You can list out the tables 
+$Connection.GetSchema("tables")|select table_name 
+
+And the schema
+$Connection.GetSchema("columns")|select tableName, ColumnName, cardinalPosition 
+
+ Here are a few of the SQL Statements that work
+SELECT * into [gloves#csv] 
+FROM [Production_ProductModel#csv]
+WHERE ProductModelID IN (3, 4) 
+
+drop table [gloves#csv] 
+
+ SELECT count(*) as [discounted]
+ FROM [Production_Product#csv] AS p
+ INNER JOIN [Sales_SalesOrderDetail#csv] AS sod
+ ON p.ProductID = sod.ProductID
+ where ((OrderQty * UnitPrice) * UnitPriceDiscount)>0
+ 
+
+SELECT Name, ProductNumber, ListPrice AS Price
+FROM [Production_Product#csv] 
+WHERE ProductLine = 'R' 
+AND DaysToManufacture < 4
+ORDER BY Name DESC
+
+SELECT p1.ProductModelID
+FROM [Production_Product#csv] AS p1
+GROUP BY p1.ProductModelID
+having p1.ProductModelID >100 
+
+SELECT p1.ProductModelID
+FROM [Production_Product#csv] AS p1
+GROUP BY p1.ProductModelID
+HAVING MAX(p1.ListPrice) >= ALL
+ (SELECT AVG(p2.ListPrice)
+ FROM [Production_Product#csv] AS p2
+ WHERE p1.ProductModelID = p2.ProductModelID) 
+
+SELECT top 50 SalesOrderID, SUM(LineTotal) AS SubTotal
+FROM [Sales_SalesOrderDetail#csv]
+GROUP BY SalesOrderID
+ORDER BY SalesOrderID; 
+
+SELECT ProductModelID, Name
+FROM [Production_ProductModel#csv]
+WHERE ProductModelID IN (3, 4)
+union all
+SELECT ProductModelID, Name
+FROM [Production_ProductModel#csv]
+WHERE ProductModelID NOT IN (3, 4)
